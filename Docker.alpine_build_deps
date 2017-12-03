@@ -4,6 +4,7 @@ RUN apk add  --update  --no-cache make gcc g++ \
     wget curl \
     python python-dev py-pip \
     build-base \
+    linux-headers \
     imagemagick \
         libbz2 \
         #libcurl \

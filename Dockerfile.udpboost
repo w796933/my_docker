@@ -1,0 +1,39 @@
+#FROM easypi/alpine-arm
+FROM alpine:3.6
+RUN apk add --no-cache --virtual .build-deps make gcc g++  git \
+	&& apk add --no-cache linux-headers \
+        && git clone --recursive https://github.com/wangyu-/UDPspeeder.git \
+        && cd UDPspeeder \
+	&& make \
+	&& mv speederv2 /speeder \
+	&& git clone --recursive https://github.com/wangyu-/udp2raw-tunnel.git \
+	&& cd udp2raw-tunnel \
+	&& make \
+	&& mv udp2raw /udp2raw \
+	&& rm -rf /UDPspeeder \
+	&& rm -rf /udp2raw-tunnel \
+	&& apk del .build-deps linux-headers
+ENV HOST="192.168.11.1:999" PASSWD="test"  MODE="server" MTU="1470" FEC="20:10" PORT5050="0.0.0.0:5050" PORT4040="0.0.0.0:4040"
+RUN echo  $'\
+case $MODE in \n\
+client|c) \n\
+/udp2raw -c -l${PORT5050} -r${HOST} -k "${PASSWD}" & \n\
+sleep 2\n\
+/speeder  -c -l${PORT4040} -r${PORT5050} -k "${PASSWD}" -f ${FEC} --mtu ${MTU} --log-level=4 \n\
+;;\n\
+server|s) \n\
+/speeder  -s -l${PORT5050} -r${HOST} -k "${PASSWD}" -f ${FEC} --mtu ${MTU} & \n\
+sleep 2 \n\
+/udp2raw -s -l${PORT4040} -r${PORT5050} -k "${PASSWD}"  \n\
+;;\n\
+*)\n\
+exit 1\n\
+;;\n\
+esac\n\
+	 '>/start.sh \
+	&& chmod a+x /start.sh \
+    && sed -i  '1i#!/bin/sh' /start.sh
+#ADD start.sh  /start.sh
+EXPOSE 4040
+#CMD ["/bin/sh","-c","/start.sh"]
+ENTRYPOINT ["/start.sh"]

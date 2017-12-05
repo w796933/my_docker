@@ -1,47 +1,55 @@
 FROM alpine:latest
 
-LABEL maintainer "Darian Raymond <admin@v2ray.com>"
+LABEL maintainer "bao3.cn@gmail.com"
 
 ADD https://storage.googleapis.com/v2ray-docker/v2ray /usr/bin/v2ray/
 ADD https://storage.googleapis.com/v2ray-docker/v2ctl /usr/bin/v2ray/
 ADD https://storage.googleapis.com/v2ray-docker/geoip.dat /usr/bin/v2ray/
 ADD https://storage.googleapis.com/v2ray-docker/geosite.dat /usr/bin/v2ray/
-
- 
-
 RUN set -ex && \
-    apk --no-cache add ca-certificates && \
+    apk --no-cache add -q  ca-certificates util-linux && \
     mkdir /var/log/v2ray/ &&\
     chmod +x /usr/bin/v2ray/v2ctl && \
     chmod +x /usr/bin/v2ray/v2ray
-
-ENV PATH /usr/bin/v2ray:$PATH
+ENV PATH=/usr/bin/v2ray:$PATH UUID=
 RUN mkdir -p /etc/v2ray/ \
     && echo $' \
-{ \
-  "log" : {\
-    "access": "/var/log/v2ray/access.log",\
-    "error": "/var/log/v2ray/error.log",\
-    "loglevel": "warning"\
-  },\
-  "inbound": {\
-    "port": 8001,\
-    "protocol": "vmess",\
-    "settings": {\
-      "clients": [\
-        {\
-          "id": "60ca58e9-003e-4c01-98de-c2223ae49153",\
-          "level": 1,\
-          "alterId": 64\
-        }\
-      ]\
-    }\
-  },\
-  "outbound": {\
-    "protocol": "freedom",\
-    "settings": {}\
-  }\
-}\
-'> /etc/v2ray/config.json
-
-CMD ["v2ray", "-config=/etc/v2ray/config.json"]
+{ \n\
+  "log" : {\n\
+    "access": "/var/log/v2ray/access.log",\n\
+    "error": "/var/log/v2ray/error.log",\n\
+    "loglevel": "warning"\n\
+  },\n\
+  "inbound": {\n\
+    "port": 8001,\n\
+    "protocol": "vmess",\n\
+    "settings": {\n\
+      "clients": [\n\
+        {\n\
+          "id": "UUID",\n\
+          "level": 1,\n\
+          "alterId": 64\n\
+        }\n\
+      ]\n\
+    }\n\
+  },\n\
+  "outbound": {\n\
+    "protocol": "freedom",\n\
+    "settings": {}\n\
+  }\n\
+}\n\
+'> /etc/v2ray/config.json \
+    && echo $' \
+    [ "${UUID}" = "" ] && UUID=$(uuidgen) \n\
+    echo -e "################################################" \n\
+    echo -e "#####  \e[0;32mYOUR UUID IS : \e[0m                    ######" \n\
+    echo -e "##### \e[0;31m${UUID} \e[0m#####" \n\
+    echo -e "################################################" \n\
+    sed -i "s#UUID#${UUID}#g" /etc/v2ray/config.json >/dev/null 2>&1 \n\
+    apk -q del util-linux > /dev/null 2>&1 \n\
+    /usr/bin/v2ray/v2ray -config=/etc/v2ray/config.json \n\
+    '>/entrypoint.sh  \
+    && chmod a+x /entrypoint.sh \
+    && sed -i '1i#!/bin/sh' /entrypoint.sh
+EXPOSE 8001
+ENTRYPOINT ["/entrypoint.sh"]

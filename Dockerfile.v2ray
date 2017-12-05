@@ -11,8 +11,9 @@ RUN set -ex && \
     mkdir /var/log/v2ray/ &&\
     chmod +x /usr/bin/v2ray/v2ctl && \
     chmod +x /usr/bin/v2ray/v2ray
-ENV PATH=/usr/bin/v2ray:$PATH UUID=
+ENV PATH=/usr/bin/v2ray:$PATH UUID= tls= URL= 
 RUN mkdir -p /etc/v2ray/ \
+    && mkdir -p /Cert/ \
     && echo $' \
 { \n\
   "log" : {\n\
@@ -33,23 +34,72 @@ RUN mkdir -p /etc/v2ray/ \
       ]\n\
     }\n\
   },\n\
+  "streamSettings": {\n\
+      "network": "kcp"\n\
+  },\n\
   "outbound": {\n\
     "protocol": "freedom",\n\
     "settings": {}\n\
-  }\n\
+  },\n\
+  "outboundDetour": [\n\
+        {\n\
+            "protocol": "blackhole",\n\
+            "settings": {},\n\
+            "tag": "blocked"\n\
+        }\n\
+    ],\n\
+    "routing": {\n\
+        "strategy": "rules",\n\
+        "settings": {\n\
+            "rules": [\n\
+                {\n\
+                    "type": "field",\n\
+                    "ip": [\n\
+                        "0.0.0.0/8",\n\
+                        "10.0.0.0/8",\n\
+                        "100.64.0.0/10",\n\
+                        "127.0.0.0/8",\n\
+                        "169.254.0.0/16",\n\
+                        "172.16.0.0/12",\n\
+                        "192.0.0.0/24",\n\
+                        "192.0.2.0/24",\n\
+                        "192.168.0.0/16",\n\
+                        "198.18.0.0/15",\n\
+                        "198.51.100.0/24",\n\
+                        "203.0.113.0/24",\n\
+                        "::1/128",\n\
+                        "fc00::/7",\n\
+                        "fe80::/10"\n\
+                    ],\n\
+                    "outboundTag": "blocked"\n\
+                }\n\
+            ]\n\
+        }\n\
+    }\n\
 }\n\
 '> /etc/v2ray/config.json \
+    && cp  /etc/v2ray/config.json /etc/v2ray/config.tls.json \
+    && sed -i 's/kcp"/kcp",\n       "security": "tls",\n        "tlsSettings": {\n          "serverName": "YOURSERVERNAME",\n         "certificates": [\n              {\n                "certificateFile": "\/Cert\/YOURSERVERNAME.crt",\n                "keyFile": "\/Cert\/YOURSERVERNAME.key"\n             }\n         ]\n           }\n        \n/' /etc/v2ray/config.tls.json \
     && echo $' \
+    set -ex \n\
     [ "${UUID}" = "" ] && UUID=$(uuidgen) \n\
     echo -e "################################################" \n\
     echo -e "#####  \e[0;32mYOUR UUID IS : \e[0m                    ######" \n\
     echo -e "##### \e[0;31m${UUID} \e[0m#####" \n\
     echo -e "################################################" \n\
-    sed -i "s#UUID#${UUID}#g" /etc/v2ray/config.json >/dev/null 2>&1 \n\
     apk -q del util-linux > /dev/null 2>&1 \n\
-    /usr/bin/v2ray/v2ray -config=/etc/v2ray/config.json \n\
+    if [ -z "${tls}" ]; then\n\
+            sed -i "s#UUID#${UUID}#g" /etc/v2ray/config.json >/dev/null 2>&1 \n\
+            /usr/bin/v2ray/v2ray -config=/etc/v2ray/config.json \n\
+    else if [ "${URL}" != "" ]; then\n\
+            sed -i "s#UUID#${UUID}#g" /etc/v2ray/config.tls.json >/dev/null 2>&1 \n\
+            sed -i "s#YOURSERVERNAME#${URL}#g" /etc/v2ray/config.tls.json >/dev/null 2>&1 \n\ 
+            /usr/bin/v2ray/v2ray -config=/etc/v2ray/config.tls.json \n\
+        fi\n\
+    fi\n\
     '>/entrypoint.sh  \
     && chmod a+x /entrypoint.sh \
     && sed -i '1i#!/bin/sh' /entrypoint.sh
 EXPOSE 8001
+VOLUME [/Cert]
 ENTRYPOINT ["/entrypoint.sh"]

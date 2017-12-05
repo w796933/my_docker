@@ -7,7 +7,7 @@ ADD https://storage.googleapis.com/v2ray-docker/v2ctl /usr/bin/v2ray/
 ADD https://storage.googleapis.com/v2ray-docker/geoip.dat /usr/bin/v2ray/
 ADD https://storage.googleapis.com/v2ray-docker/geosite.dat /usr/bin/v2ray/
 
-COPY config.json /etc/v2ray/config.json
+ 
 
 RUN set -ex && \
     apk --no-cache add ca-certificates && \
@@ -16,5 +16,31 @@ RUN set -ex && \
     chmod +x /usr/bin/v2ray/v2ray
 
 ENV PATH /usr/bin/v2ray:$PATH
+RUN echo $' \
+{ \
+  "log" : {\
+    "access": "/var/log/v2ray/access.log",\
+    "error": "/var/log/v2ray/error.log",\
+    "loglevel": "warning"\
+  },\
+  "inbound": {\
+    "port": 8001,\
+    "protocol": "vmess",\
+    "settings": {\
+      "clients": [\
+        {\
+          "id": "60ca58e9-003e-4c01-98de-c2223ae49153",\
+          "level": 1,\
+          "alterId": 64\
+        }\
+      ]\
+    }\
+  },\
+  "outbound": {\
+    "protocol": "freedom",\
+    "settings": {}\
+  }\
+}\
+'> /etc/v2ray/config.json
 
 CMD ["v2ray", "-config=/etc/v2ray/config.json"]

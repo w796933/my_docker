@@ -35,7 +35,7 @@ RUN mkdir -p /etc/v2ray/ \
     }\n\
   },\n\
   "streamSettings": {\n\
-      "network": "kcp"\n\
+      "network": "tcp"\n\
   },\n\
   "outbound": {\n\
     "protocol": "freedom",\n\
@@ -79,7 +79,7 @@ RUN mkdir -p /etc/v2ray/ \
 }\n\
 '> /etc/v2ray/config.json \
     && cp  /etc/v2ray/config.json /etc/v2ray/config.tls.json \
-    && sed -i 's/kcp"/kcp",\n       "security": "tls",\n        "tlsSettings": {\n          "serverName": "YOURSERVERNAME",\n         "certificates": [\n              {\n                "certificateFile": "\/Cert\/YOURSERVERNAME.crt",\n                "keyFile": "\/Cert\/YOURSERVERNAME.key"\n             }\n         ]\n           }\n        \n/' /etc/v2ray/config.tls.json \
+    && sed -i 's/"tcp"/"tcp",\n       "security": "tls",\n        "tlsSettings": {\n          "serverName": "YOURSERVERNAME",\n         "certificates": [\n              {\n                "certificateFile": "\/Cert\/YOURSERVERNAME.crt",\n                "keyFile": "\/Cert\/YOURSERVERNAME.key"\n             }\n         ]\n           }\n        \n/' /etc/v2ray/config.tls.json \
     && echo $' \
     set -ex \n\
     [ "${UUID}" = "" ] && UUID=$(uuidgen) \n\

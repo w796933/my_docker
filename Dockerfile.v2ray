@@ -11,7 +11,9 @@ RUN set -ex && \
     mkdir /var/log/v2ray/ &&\
     chmod +x /usr/bin/v2ray/v2ctl && \
     chmod +x /usr/bin/v2ray/v2ray
-ENV PATH=/usr/bin/v2ray:$PATH UUID= tls= URL= 
+#MODE could be tcp/kcp/websocket
+#If you leave UUID to a null value ,the it would use a random ,and you could read it in 'docker logs '
+ENV PATH=/usr/bin/v2ray:$PATH MODE=tcp kcpheader=wechat-video UUID= tls= URL= 
 RUN mkdir -p /etc/v2ray/ \
     && mkdir -p /Cert/ \
     && echo $' \
@@ -78,25 +80,43 @@ RUN mkdir -p /etc/v2ray/ \
     }\n\
 }\n\
 '> /etc/v2ray/config.json \
-    && cp  /etc/v2ray/config.json /etc/v2ray/config.tls.json \
-    && sed -i 's/"tcp"/"tcp",\n       "security": "tls",\n        "tlsSettings": {\n          "serverName": "YOURSERVERNAME",\n         "certificates": [\n              {\n                "certificateFile": "\/Cert\/YOURSERVERNAME.crt",\n                "keyFile": "\/Cert\/YOURSERVERNAME.key"\n             }\n         ]\n           }\n        \n/' /etc/v2ray/config.tls.json \
     && echo $' \
-    set -ex \n\
     [ "${UUID}" = "" ] && UUID=$(uuidgen) \n\
     echo -e "################################################" \n\
     echo -e "#####  \e[0;32mYOUR UUID IS : \e[0m                    ######" \n\
     echo -e "##### \e[0;31m${UUID} \e[0m#####" \n\
     echo -e "################################################" \n\
-    apk -q del util-linux > /dev/null 2>&1 \n\
-    if [ -z "${tls}" ]; then\n\
-            sed -i "s#UUID#${UUID}#g" /etc/v2ray/config.json >/dev/null 2>&1 \n\
-            /usr/bin/v2ray/v2ray -config=/etc/v2ray/config.json \n\
-    else if [ "${URL}" != "" ]; then\n\
-            sed -i "s#UUID#${UUID}#g" /etc/v2ray/config.tls.json >/dev/null 2>&1 \n\
-            sed -i "s#YOURSERVERNAME#${URL}#g" /etc/v2ray/config.tls.json >/dev/null 2>&1 \n\ 
-            /usr/bin/v2ray/v2ray -config=/etc/v2ray/config.tls.json \n\
+    apk -q del util-linux  \n\
+    sed -i "s#UUID#${UUID}#g" /etc/v2ray/config.json  \n\
+    case $MODE in \n\
+    tcp)\n\
+     if [  "${tls}" = "yes" ]; then\n\
+        if [ "${URL}" !=  "" ] ; then \n\
+        sed -i "s#YOURSERVERNAME#${URL}#g" /etc/v2ray/config.json >/dev/null 2>&1 \n\ 
+        echo -e "Now \e[0;32mV2RAY\e[0m would startup in \e[0;31m TLS \e[0m mode"\n\
+        echo -e "The \e[0;32mURL \e[0m was set to  \e[0;31m ${URL} \e[0m "\n\
+        else \n\
+        echo -e "IF Your Want to use \e[0;31mTLS\e[0m , you should specified a \e[0;32mURL\e[0m and certificates." \n\
         fi\n\
+    else\n\
+        echo -e "Now \e[0;32mV2RAY\e[0m would startup in \e[0;31mnon-tls\e[0m status"\n\
     fi\n\
+    ;;\n\
+    kcp)\n\
+    sed -i "s/\\"tcp\\"/\\"kcp\\",\\n\\t\\"kcpSettings\\"\: {\\n\\t\\t\\"mtu\\"\: 1350, \\n\\t\\t\\"tti\\"\: 20,\\n\\t\\t\\"uplinkCapacity\\"\: 5, \\n\\t\\t\\"downlinkCapacity\\"\: 100,\\n\\t\\t\\"congestion\\"\: false,\\n\\t\\t\\"readBufferSize\\"\: 1,\\n\\t\\t\\"writeBufferSize\\"\: 1,\\n\\t\\t\\"header\\"\: {\\n\\t\\t\\t\\"type\\"\: \\"none\\"\\n\\t\\t\\t}\\n\\t}\\n/g" /etc/v2ray/config.json  \n\
+  if  [ "${kcpheader}" != "none" ]; then \n\
+   sed -i "s#none#${kcpheader}#g" /etc/v2ray/config.json \n\
+   echo -e "Now \e[0;32mV2RAY\e[0m would startup in \e[0;31mKCP\e[0m mode"\n\
+   echo -e "\e[0;32mHTTP Header\e[0m was set to  \e[0;31m ${kcpheader}  \e[0m mode"\n\
+   fi \n\
+    ;; \n\
+    websocket|ws) \n\
+    sed -i "s/\\"tcp\\"/\\"ws\\"/g" /etc/v2ray/config.json \n\
+    echo -e "Now \e[0;32mV2RAY\e[0m would startup in \e[0;31mWebsocket\e[0m mode"\n\
+    ;; \n\
+esac \n\
+
+/usr/bin/v2ray/v2ray -config=/etc/v2ray/config.json \n\
     '>/entrypoint.sh  \
     && chmod a+x /entrypoint.sh \
     && sed -i '1i#!/bin/sh' /entrypoint.sh

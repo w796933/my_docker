@@ -1,0 +1,20 @@
+from golang:1.10.0-alpine3.7
+ENV OTE_DEV_Account YourName-ote
+ENV OTE_DEV_API xxxxxxxxxxxx135Chactors
+ENV Product_Account YourName
+ENV Product_API xxxxxxxxxxxx135Chactors
+ENV DOMAIN example.com
+ENV SUB_DOMAIN test
+RUN apk --no-cache --update add git \
+	&& go get github.com/mfycheng/name-dyndns \
+	&&   apk del libcurl git expat  pcre2
+RUN echo $'\
+	sed -i "s/production-account/$Product_Account/" /go/src/github.com/mfycheng/name-dyndns/api/config_test.json \n\
+	sed -i "s/live\\.com/$DOMAIN/" /go/src/github.com/mfycheng/name-dyndns/api/config_test.json \n\
+	sed -i "s/\\[\\(.*\\)\]/\\[\\"$SUB_DOMAIN\\"\\]/" /go/src/github.com/mfycheng/name-dyndns/api/config_test.json \n\
+	sed -i "s/token\\":\\(.*\\)$/token\\": \\"$Product_API\\",/" /go/src/github.com/mfycheng/name-dyndns/api/config_test.json \n\
+	name-dyndns -daemon=true -config="/go/src/github.com/mfycheng/name-dyndns/api/config_test.json" \n\
+	' > /entrypoint.sh \
+	&& chmod a+x /entrypoint.sh \
+	&& sed -i '1i#!/bin/sh' /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

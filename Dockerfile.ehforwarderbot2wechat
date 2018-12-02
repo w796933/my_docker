@@ -1,0 +1,26 @@
+from alpine:3.8
+
+RUN  apk  add --update --no-cache nano \
+	gcc python3 python3-dev \
+	py3-numpy py3-yaml py3-pillow py3-requests \
+	musl-dev ffmpeg libmagic libwebp   libffi-dev  openssl-dev \
+	&& pip3 install  --upgrade pip \
+	&& pip3 install  \
+	ehforwarderbot efb-telegram-master efb-wechat-slave \
+	&& mkdir -p /root/.ehforwarderbot/profiles/default/blueset.telegram/  \
+&& echo $'\
+master_channel: blueset.telegram\n\
+slave_channels: \n\
+- blueset.wechat\n\
+'>/root/.ehforwarderbot/profiles/default/config.yaml \
+&& echo $'\
+token: "12345678:1a2b3c4d5e6g7h8i9j"\n\
+admins:\n\
+- 102938475\n\
+'>/root/.ehforwarderbot/profiles/default/blueset.telegram/config.yaml \
+&& ln -s /root/.ehforwarderbot/profiles/default/blueset.telegram/config.yaml /wechat.yaml \
+&& apk del gcc musl-dev libffi-dev openssl-dev python3-dev
+CMD ["ehforwarderbot"]
+
+
+#you just need to modify /wechat.yaml
